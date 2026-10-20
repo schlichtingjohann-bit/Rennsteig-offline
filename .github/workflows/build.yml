@@ -275,10 +275,8 @@ jobs:
           km = [f for f in fc['features'] if f['properties'].get('kind') == 'km' and f['properties']['km'] == 27]
           print(*km[0]['geometry']['coordinates'])")
           echo "Testposition: $LAT, $LON"
-          (cd build/web && python3 -m http.server 8080 > /tmp/http.log 2>&1 &)
-          sleep 1
           mkdir -p docs/screenshots
-          NODE_PATH=/tmp/pw/node_modules node .github/scripts/web_screenshots.js http://localhost:8080/ docs/screenshots "$LAT" "$LON"
+          NODE_PATH=/tmp/pw/node_modules node .github/scripts/web_screenshots.js build/web docs/screenshots "$LAT" "$LON"
 
       - name: Bildschirmfotos ins Repository übernehmen
         if: github.ref_type == 'branch'

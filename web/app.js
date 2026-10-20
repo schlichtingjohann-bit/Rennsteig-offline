@@ -539,6 +539,8 @@
   }
 
   function screenAngle() {
+    // iOS: window.orientation ist dort die verlässliche Angabe; sonst Screen Orientation API
+    if (isIOS && typeof window.orientation === "number") return window.orientation;
     if (screen.orientation && typeof screen.orientation.angle === "number") return screen.orientation.angle;
     return typeof window.orientation === "number" ? window.orientation : 0;
   }

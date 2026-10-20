@@ -1,8 +1,12 @@
 // Testet die Web-App wie auf einem iPhone (WebKit) und macht Bildschirmfotos.
-// Aufruf: node web_screenshots.js <url> <ausgabeordner> <breitengrad> <längengrad>
+// Aufruf: node web_screenshots.js <web-ordner> <ausgabeordner> <breitengrad> <längengrad>
+// Für den Offline-Test wird der Webserver abgeschaltet und die App neu geladen.
 const { webkit, devices } = require('playwright');
-const [url, out, lat, lon] = process.argv.slice(2);
+const { spawn } = require('child_process');
+const [webDir, out, lat, lon] = process.argv.slice(2);
+const url = 'http://localhost:8080/';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const server = spawn('python3', ['-m', 'http.server', '8080'], { cwd: webDir, stdio: 'ignore' });
 
 (async () => {
   const browser = await webkit.launch();
@@ -32,10 +36,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     }
   };
   const state = () => p.evaluate(() => ({
-    mode: rennsteig.mode, bearing: Math.round(rennsteig.map.getBearing()), zoom: +rennsteig.map.getZoom().toFixed(2),
+    orientation: window.orientation, screenAngle: screen.orientation && screen.orientation.angle, mode: rennsteig.mode, bearing: Math.round(rennsteig.map.getBearing()), zoom: +rennsteig.map.getZoom().toFixed(2),
     title: document.getElementById('statusTitle').textContent, detail: document.getElementById('statusDetail').textContent,
   }));
 
+  await sleep(1000);
   await p.goto(url);
   await p.waitForSelector('#setup:not([hidden])');
   await shot('web-01-installieren');
@@ -67,7 +72,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await p.click('#btnProfile');
 
   try {
-    await ctx.setOffline(true);
+    server.kill();
+    await sleep(500);
     await p.reload();
     await mapReady();
     await compass(120);
@@ -78,4 +84,5 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     console.log('Offline-Test nicht möglich:', e.message);
   }
   await browser.close();
-})().catch((e) => { console.error(e); process.exit(1); });
+  server.kill();
+})().catch((e) => { console.error(e); server.kill(); process.exit(1); });
