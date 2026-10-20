@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.PointF
 import android.graphics.PorterDuff
 import android.graphics.RectF
 import android.graphics.Typeface
@@ -95,6 +96,9 @@ class MainActivity : Activity() {
     private var animStart = 0L
     private var animDuration = 900L
     private var frameScheduled = false
+    private var cameraOnTarget = true
+    private var zoomTarget: Double? = null
+    private var topPadding = 0.0
     private var lastStatusUpdate = 0L
     private var firstFixHandled = false
     private var gpsDialogShown = false
@@ -325,6 +329,7 @@ class MainActivity : Activity() {
         val styleJson = DataLoader.readAsset(this, "style/rennsteig.json")
             .replace("{MAP_PATH}", AssetInstaller.mapFile(this).absolutePath)
             .replace("{DEM_PATH}", AssetInstaller.demFile(this).absolutePath)
+            .replace("{CONTOUR_PATH}", AssetInstaller.contourFile(this).absolutePath)
         val builder = Style.Builder().fromJson(styleJson)
         for ((name, bmp) in icons) builder.withImage(name, bmp)
         m.setStyle(builder) { s -> onStyleLoaded(s, d) }
@@ -332,7 +337,8 @@ class MainActivity : Activity() {
         m.addOnMapClickListener { point -> onMapClick(point) }
         m.addOnMoveListener(object : MapLibreMap.OnMoveListener {
             override fun onMoveBegin(detector: MoveGestureDetector) {
-                if (mode != Mode.FREE) setMode(Mode.FREE)
+                // Verschieben mit einem Finger beendet das Folgen, Zoomen mit zwei Fingern nicht
+                if (mode != Mode.FREE && detector.pointersCount <= 1) setMode(Mode.FREE)
             }
             override fun onMove(detector: MoveGestureDetector) {}
             override fun onMoveEnd(detector: MoveGestureDetector) {}
@@ -348,6 +354,7 @@ class MainActivity : Activity() {
             override fun onRotateEnd(detector: RotateGestureDetector) {}
         })
         m.addOnCameraMoveListener { onCameraMoved() }
+        mapView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateFocalPoint() }
         onCameraMoved()
     }
 
@@ -467,7 +474,7 @@ class MainActivity : Activity() {
         if (target != null) {
             val cur = shownHeading
             val next = if (cur == null) target else Geo.normalize(cur + Geo.angleDiff(cur, target) * 0.22)
-            if (cur == null || abs(Geo.angleDiff(cur, next)) > 0.04) {
+            if (cur == null || abs(Geo.angleDiff(cur, next)) > 0.08) {
                 shownHeading = next
                 changed = true
                 headingSettled = false
@@ -476,26 +483,70 @@ class MainActivity : Activity() {
 
         if (changed) {
             updateMeSource()
-            if (mode != Mode.FREE && !shownLat.isNaN()) {
-                val cam = m.cameraPosition
-                val bearing = if (mode == Mode.HEADING) shownHeading ?: cam.bearing else 0.0
-                val topPad = if (mode == Mode.HEADING) mapView.height * 0.32 else 0.0
-                m.moveCamera(
-                    CameraUpdateFactory.newCameraPosition(
-                        CameraPosition.Builder()
-                            .target(LatLng(shownLat, shownLon))
-                            .zoom(cam.zoom)
-                            .bearing(bearing)
-                            .tilt(0.0)
-                            .padding(0.0, topPad, 0.0, 0.0)
-                            .build()
-                    )
-                )
-            }
             if (poiLiveArrow != null) updatePoiLive()
         }
+        var cameraSettled = true
+        if (mode != Mode.FREE && !shownLat.isNaN() && (changed || !cameraOnTarget)) {
+            cameraSettled = followCamera(m)
+        }
+        cameraOnTarget = cameraSettled
         val animating = !animToLat.isNaN() && now - animStart < animDuration
-        if (animating || !headingSettled) ensureFrameLoop()
+        if (animating || !headingSettled || !cameraSettled) ensureFrameLoop()
+    }
+
+    /**
+     * Führt die Kamera der Position (und im Einnorden-Modus der Blickrichtung) nach.
+     * Zoom, Drehung, Position und Bildversatz nähern sich weich ihrem Ziel.
+     * @return true, wenn die Kamera ihr Ziel erreicht hat
+     */
+    private fun followCamera(m: MapLibreMap): Boolean {
+        val cam = m.cameraPosition
+        val k = 0.25
+        val target = cam.target
+        val curLat = target?.latitude ?: shownLat
+        val curLon = target?.longitude ?: shownLon
+        var lat = curLat + (shownLat - curLat) * k
+        var lon = curLon + (shownLon - curLon) * k
+        val posDone = abs(shownLat - lat) < 1e-7 && abs(shownLon - lon) < 1e-7
+        if (posDone) {
+            lat = shownLat
+            lon = shownLon
+        }
+
+        val wantBearing = if (mode == Mode.HEADING) shownHeading ?: cam.bearing else 0.0
+        val db = Geo.angleDiff(cam.bearing, wantBearing)
+        val bearingDone = abs(db) < 0.3
+        val bearing = if (bearingDone) wantBearing else Geo.normalize(cam.bearing + db * 0.3)
+
+        var zoom = cam.zoom
+        val zt = zoomTarget
+        var zoomDone = true
+        if (zt != null) {
+            zoom += (zt - zoom) * 0.2
+            if (abs(zt - zoom) < 0.01) {
+                zoom = zt
+                zoomTarget = null
+            } else {
+                zoomDone = false
+            }
+        }
+
+        val wantPad = if (mode == Mode.HEADING) mapView.height * HEADING_TOP_PAD else 0.0
+        val padDone = abs(wantPad - topPadding) < 1.0
+        topPadding = if (padDone) wantPad else topPadding + (wantPad - topPadding) * 0.25
+
+        m.moveCamera(
+            CameraUpdateFactory.newCameraPosition(
+                CameraPosition.Builder()
+                    .target(LatLng(lat, lon))
+                    .zoom(zoom)
+                    .bearing(bearing)
+                    .tilt(0.0)
+                    .padding(0.0, topPadding, 0.0, 0.0)
+                    .build()
+            )
+        )
+        return posDone && bearingDone && zoomDone && padDone
     }
 
     private fun setMode(newMode: Mode) {
@@ -506,21 +557,29 @@ class MainActivity : Activity() {
         if (newMode == Mode.FOLLOW && oldMode == Mode.HEADING) preferHeadingUp = false
         savePrefs()
         updateLocateButton()
+        updateFocalPoint()
         if (m == null || newMode == Mode.FREE) return
         if (lastFix == null || shownLat.isNaN()) {
             toast("Warte auf GPS-Signal …")
             return
         }
-        val zoom = max(m.cameraPosition.zoom, 14.5)
-        val bearing = if (newMode == Mode.HEADING) shownHeading ?: 0.0 else 0.0
-        val topPad = if (newMode == Mode.HEADING) mapView.height * 0.32 else 0.0
-        m.animateCamera(
-            CameraUpdateFactory.newCameraPosition(
-                CameraPosition.Builder().target(LatLng(shownLat, shownLon)).zoom(zoom).bearing(bearing)
-                    .tilt(0.0).padding(0.0, topPad, 0.0, 0.0).build()
-            ), 500
-        )
+        m.cancelTransitions()
+        if (oldMode == Mode.FREE) {
+            zoomTarget = max(m.cameraPosition.zoom, 14.5)
+            topPadding = m.cameraPosition.padding?.getOrNull(1) ?: 0.0
+        }
+        cameraOnTarget = false
         ensureFrameLoop()
+    }
+
+    /** Beim Folgen wird um die eigene Position gezoomt statt um die Fingermitte. */
+    private fun updateFocalPoint() {
+        val m = map ?: return
+        m.uiSettings.focalPoint = when (mode) {
+            Mode.FREE -> null
+            Mode.FOLLOW -> PointF(mapView.width / 2f, mapView.height / 2f)
+            Mode.HEADING -> PointF(mapView.width / 2f, (mapView.height * (1 + HEADING_TOP_PAD) / 2).toFloat())
+        }
     }
 
     private fun onLocateClicked() {
@@ -1054,5 +1113,7 @@ class MainActivity : Activity() {
         private const val EMPTY = """{"type":"FeatureCollection","features":[]}"""
         /** Geoidundulation in Thüringen: GPS-Höhe (Ellipsoid) liegt ca. 47 m über NHN. */
         private const val GEOID_HEIGHT = 47.0
+        /** Im Einnorden-Modus sitzt die eigene Position im unteren Drittel, damit man mehr voraus sieht. */
+        private const val HEADING_TOP_PAD = 0.32
     }
 }

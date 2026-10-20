@@ -86,7 +86,7 @@ jobs:
         run: |
           mkdir -p app/src/main/assets/data app/src/main/assets/tiles
           cp build/out/route.geojson build/out/pois.geojson build/out/profile.json app/src/main/assets/data/
-          cp build/out/rennsteig.mbtiles build/out/dem.mbtiles app/src/main/assets/tiles/
+          cp build/out/rennsteig.mbtiles build/out/dem.mbtiles build/out/contours.mbtiles app/src/main/assets/tiles/
           ls -la build/out app/src/main/assets/data app/src/main/assets/tiles
 
       - name: Geänderte Routen- und Ortsdaten ins Repository übernehmen
@@ -116,6 +116,22 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk "RennsteigOffline-${{ steps.version.outputs.name }}.apk"
           cp build/out/rennsteig.gpx Rennsteig.gpx || true
           ls -la *.apk
+
+      - name: Test-APK für den Emulator (x86_64)
+        if: github.event_name == 'push' || inputs.screenshots
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          ./gradlew --no-daemon assembleRelease -Pabis=x86_64
+          mkdir -p emulator && cp app/build/outputs/apk/release/app-release.apk emulator/RennsteigOffline-x86_64.apk
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'push' || inputs.screenshots
+        with:
+          name: emulator-apk
+          path: emulator/RennsteigOffline-x86_64.apk
+          retention-days: 3
 
       - uses: actions/upload-artifact@v4
         with:
@@ -170,7 +186,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: RennsteigOffline-apk
+          name: emulator-apk
 
       - name: KVM aktivieren
         run: |
@@ -187,7 +203,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash .github/scripts/screenshots.sh "$(ls RennsteigOffline-*.apk | head -n1)" docs/screenshots
+          script: bash .github/scripts/screenshots.sh RennsteigOffline-x86_64.apk docs/screenshots
 
       - name: Bildschirmfotos ins Repository übernehmen
         if: github.ref_type == 'branch'

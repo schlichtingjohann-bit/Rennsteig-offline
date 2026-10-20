@@ -12,10 +12,12 @@ import java.io.FileOutputStream
 object AssetInstaller {
     private const val MAP_ASSET = "tiles/rennsteig.mbtiles"
     private const val DEM_ASSET = "tiles/dem.mbtiles"
+    private const val CONTOUR_ASSET = "tiles/contours.mbtiles"
 
     private fun dir(context: Context) = File(context.filesDir, "maps").apply { mkdirs() }
     fun mapFile(context: Context) = File(dir(context), "rennsteig.mbtiles")
     fun demFile(context: Context) = File(dir(context), "dem.mbtiles")
+    fun contourFile(context: Context) = File(dir(context), "contours.mbtiles")
 
     fun install(context: Context, progress: (String) -> Unit) {
         val stampFile = File(dir(context), "installed.stamp")
@@ -27,6 +29,7 @@ object AssetInstaller {
         copy(context, MAP_ASSET, mapFile(context))
         progress("Höhenmodell wird eingerichtet …")
         copy(context, DEM_ASSET, demFile(context))
+        copy(context, CONTOUR_ASSET, contourFile(context))
         stampFile.writeText(stamp)
     }
 

@@ -16,7 +16,10 @@ android {
         versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
         versionName = System.getenv("VERSION_NAME") ?: "1.0.0"
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            // Handys: ARM. Für den Emulator-Test baut die CI zusätzlich mit -Pabis=x86_64.
+            val abis = (project.findProperty("abis") as String?)?.split(",")
+                ?: listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += abis
         }
     }
 

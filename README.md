@@ -7,7 +7,7 @@ Karte, Route, Orte, Höhenprofil, GPS und Kompass funktionieren **komplett ohne 
 
 - **Exakte Route** des Rennsteigs aus OpenStreetMap, mit km-Markierungen und Start/Ziel
 - **Offline-Vektorkarte** eines ca. 20 km breiten Korridors entlang des Weges (Wald, Wege, Pfade,
-  Orte, Gipfel mit Höhenangabe) plus **Geländeschummerung** aus einem Höhenmodell
+  Orte, Gipfel mit Höhenangabe) plus **Geländeschummerung** und **Höhenlinien** (20 m) aus einem Höhenmodell
 - **GPS-Standort** mit Genauigkeitskreis – GPS braucht kein Internet
 - **Blickrichtung**: Sichtkegel zeigt, wohin du schaust (Kompass, Deklination wird automatisch
   korrigiert; flach gehalten zählt die Oberkante, aufrecht gehalten die Rückseite des Handys)

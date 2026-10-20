@@ -1,7 +1,7 @@
 {
   "version": 8,
   "name": "Rennsteig Outdoor",
-  "metadata": {"rennsteig:comment": "{MAP_PATH} und {DEM_PATH} werden zur Laufzeit durch absolute Dateipfade ersetzt."},
+  "metadata": {"rennsteig:comment": "{MAP_PATH}, {DEM_PATH} und {CONTOUR_PATH} werden zur Laufzeit durch absolute Dateipfade ersetzt."},
   "glyphs": "asset://fonts/{fontstack}/{range}.pbf",
   "sources": {
     "omt": {
@@ -15,6 +15,10 @@
       "encoding": "terrarium",
       "tileSize": 256,
       "attribution": "Höhendaten: Mapzen Terrain Tiles"
+    },
+    "contours": {
+      "type": "vector",
+      "url": "mbtiles://{CONTOUR_PATH}"
     },
     "route": {"type": "geojson", "data": {"type": "FeatureCollection", "features": []}},
     "track": {"type": "geojson", "data": {"type": "FeatureCollection", "features": []}},
@@ -72,11 +76,33 @@
     {
       "id": "hillshade", "type": "hillshade", "source": "dem",
       "paint": {
-        "hillshade-exaggeration": ["interpolate", ["linear"], ["zoom"], 6, 0.5, 12, 0.35, 15, 0.25],
+        "hillshade-exaggeration": ["interpolate", ["linear"], ["zoom"], 6, 0.5, 12, 0.45, 16, 0.35],
         "hillshade-shadow-color": "#3c4a37",
         "hillshade-highlight-color": "#ffffff",
         "hillshade-accent-color": "#5b6b52"
       }
+    },
+    {
+      "id": "contour-line", "type": "line", "source": "contours", "source-layer": "contour", "minzoom": 11,
+      "layout": {"line-join": "round"},
+      "paint": {
+        "line-color": "#9a7148",
+        "line-opacity": ["interpolate", ["linear"], ["zoom"], 11, 0.35, 14, 0.55],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 11, ["case", ["==", ["get", "idx"], 1], 0.8, 0.4], 15, ["case", ["==", ["get", "idx"], 1], 1.4, 0.7]]
+      }
+    },
+    {
+      "id": "contour-label", "type": "symbol", "source": "contours", "source-layer": "contour", "minzoom": 13,
+      "filter": ["==", ["get", "idx"], 1],
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": ["to-string", ["get", "ele"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": 9.5,
+        "text-padding": 10,
+        "symbol-spacing": 350
+      },
+      "paint": {"text-color": "#8a6038", "text-halo-color": "rgba(255,255,255,0.85)", "text-halo-width": 1.2}
     },
     {
       "id": "park-outline", "type": "line", "source": "omt", "source-layer": "park", "minzoom": 10,
@@ -327,6 +353,7 @@
       "filter": ["all", ["==", ["get", "kind"], "me"], ["has", "bearing"]],
       "layout": {
         "icon-image": "view-cone",
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 8, 0.35, 12, 0.7, 15, 1],
         "icon-rotate": ["get", "bearing"],
         "icon-rotation-alignment": "map",
         "icon-pitch-alignment": "map",

@@ -5,6 +5,7 @@
 #   route.geojson, pois.geojson, profile.json  (klein, werden ins Repo übernommen)
 #   rennsteig.mbtiles                           (Vektorkarte, OpenMapTiles-Schema)
 #   dem.mbtiles                                 (Terrarium-Höhenkacheln für die Schummerung)
+#   contours.mbtiles                            (Höhenlinien als Vektorkacheln)
 #
 # Benötigt: curl, osmium-tool, Java 21, Python 3 mit den Paketen aus requirements.txt
 set -euo pipefail
@@ -63,6 +64,10 @@ echo "== Höhenmodell und Profil"
 python3 "$ROOT/pipeline/build_dem.py" \
   --route "$OUT/route.geojson" --pois "$OUT/pois.geojson" --corridor corridor.geojson \
   --cache "$WORK/dem-cache" --out-mbtiles "$OUT/dem.mbtiles" --out-profile "$OUT/profile.json"
+
+echo "== Höhenlinien"
+python3 "$ROOT/pipeline/build_contours.py" \
+  --corridor corridor.geojson --cache "$WORK/dem-cache" --out "$OUT/contours.mbtiles"
 
 echo "== Vektorkacheln (planetiler $PLANETILER_VERSION)"
 if [ ! -s "planetiler-$PLANETILER_VERSION.jar" ]; then

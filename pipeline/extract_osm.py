@@ -258,6 +258,10 @@ VIEW = {"tower": 3.2, "viewpoint": 2.2, "peak": 1.4}
 
 MAX_OFF = {"lodging": 3000, "food": 2000, "sight": 3000, "view": 2000, "shelter": 400,
            "water": 600, "station": 4000}
+# engere Grenzen für sehr häufige, eher kleine Objekte
+KIND_MAX_OFF = {"memorial": 500, "boundary_stone": 300, "spring": 500, "rock": 800, "peak": 1000,
+                "viewpoint": 1200, "apartment": 1500, "chalet": 1500, "fast_food": 1000,
+                "ice_cream": 1000, "church": 1000}
 TOP_PER_SECTION = {"lodging": 2, "food": 2, "sight": 2, "view": 2}
 TOP_MIN_SCORE = {"lodging": 4.5, "food": 4.5, "sight": 4.0, "view": 4.0}
 SECTION_KM = 15.0
@@ -302,6 +306,8 @@ def classify(t):
         return "sight", "cave"
     if natural in ("rock", "stone") and name:
         return "sight", "rock"
+    if natural == "spring" and t.get("drinking_water") == "yes":
+        return "water", "spring"
     if natural == "spring" and name:
         return "sight", "spring"
     if amenity == "shelter" and t.get("shelter_type") not in ("public_transport",):
@@ -328,6 +334,15 @@ class PoiHandler(osmium.SimpleHandler):
         if not c:
             return
         t = {tg.k: tg.v for tg in tags}
+        name = t.get("name", "").strip()
+        if len(name) < 3:
+            # z. B. historische Rennsteigsteine mit name=R: Beschreibung als Namen nehmen
+            desc = t.get("description", "").strip()
+            if 3 <= len(desc) <= 60:
+                t["name"] = desc
+                t.pop("description", None)
+            else:
+                t.pop("name", None)
         self.items.append({"id": oid, "cat": c[0], "kind": c[1], "lon": lon, "lat": lat,
                            "tags": t})
 
@@ -419,6 +434,7 @@ def dedupe(items):
             for q in by_key[key]:
                 if haversine(p["lon"], p["lat"], q["lon"], q["lat"]) < 150:
                     dup = True
+                    q["highlight"] = q.get("highlight") or p.get("highlight")
                     break
         if not dup:
             by_key[key].append(p)
@@ -427,9 +443,7 @@ def dedupe(items):
 
 
 def process_pois(items, route_utm, cum_utm, cum_m, highlights):
-    total_utm = route_utm.length
     hl = [dict(h, rx=re.compile(h["match"], re.I)) for h in highlights]
-    kept = []
     for p in items:
         x, y = TO_UTM.transform(p["lon"], p["lat"])
         pt = Point(x, y)
@@ -438,18 +452,20 @@ def process_pois(items, route_utm, cum_utm, cum_m, highlights):
         # UTM-Abstand entlang der Linie -> geodätische km
         p["km"] = round(interp(along_utm, cum_utm, cum_m) / 1000.0, 2)
         p["off"] = int(round(off))
-        name = p["tags"].get("name", "")
         p["highlight"] = None
-        for h in hl:
-            if p["cat"] in h["cats"] and name and h["rx"].search(name) and off <= h["max_off"]:
-                p["highlight"] = h["desc"]
-                break
-        if off > MAX_OFF[p["cat"]] and not p["highlight"]:
-            continue
-        kept.append(p)
+        p["score"] = score(p)
+    # Höhepunkte: je Eintrag nur der beste Treffer (z. B. echte Wartburg statt Miniatur), außer "multi"
+    for h in hl:
+        matches = [p for p in items
+                   if p["cat"] in h["cats"] and p["tags"].get("name") and h["rx"].search(p["tags"]["name"])
+                   and p["off"] <= h["max_off"]]
+        matches.sort(key=lambda p: (-p["score"], p["off"]))
+        for p in (matches if h.get("multi") else matches[:1]):
+            p["highlight"] = h["desc"]
+    kept = [p for p in items
+            if p["highlight"] or p["off"] <= min(MAX_OFF[p["cat"]], KIND_MAX_OFF.get(p["kind"], 10 ** 9))]
     kept = dedupe(kept)
     for p in kept:
-        p["score"] = score(p)
         p["top"] = bool(p["highlight"])
     # Empfehlungen je Abschnitt
     total_km = cum_m[-1] / 1000.0

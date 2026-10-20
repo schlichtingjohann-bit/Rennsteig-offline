@@ -1,5 +1,5 @@
 {
-  "_comment": "Kuratierte Höhepunkte. 'match' ist ein regulärer Ausdruck auf den OSM-Namen (ohne Groß-/Kleinschreibung). Nur Objekte, die in OSM tatsächlich innerhalb von 'max_off' Metern zum Rennsteig liegen, werden markiert – Koordinaten stammen immer aus OSM.",
+  "_comment": "Kuratierte Höhepunkte. 'match' ist ein regulärer Ausdruck auf den OSM-Namen (ohne Groß-/Kleinschreibung). Nur Objekte, die in OSM tatsächlich innerhalb von 'max_off' Metern zum Rennsteig liegen, werden markiert – Koordinaten stammen immer aus OSM. Pro Eintrag wird nur der beste Treffer markiert, außer bei 'multi': true.",
   "highlights": [
     {
       "match": "^Wartburg$",
@@ -34,6 +34,7 @@
     {
       "match": "Rennsteigwarte",
       "cats": ["view", "sight"],
+      "multi": true,
       "max_off": 2500,
       "desc": "Aussichtsturm am Rennsteig mit Blick über die Kammlagen."
     },
@@ -52,6 +53,7 @@
     {
       "match": "Dreiherrenstein",
       "cats": ["sight"],
+      "multi": true,
       "max_off": 1000,
       "desc": "Historischer Grenzstein: Hier stießen einst drei Herrschaftsgebiete aneinander."
     },
@@ -80,7 +82,7 @@
       "desc": "Weite Bergwiese am Rennsteig – ein beliebter Rastplatz."
     },
     {
-      "match": "Schieferpark|Schieferbergbau",
+      "match": "Schieferpark|Historischer Schieferbergbau",
       "cats": ["sight"],
       "max_off": 4000,
       "desc": "Ehemaliger Schiefertagebau bei Lehesten – technisches Denkmal mit Ausstellung."
