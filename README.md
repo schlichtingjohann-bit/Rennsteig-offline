@@ -59,7 +59,7 @@ Nach der Einrichtung läuft sie **ohne Internet** und startet vom Home-Bildschir
 
 **Installation auf dem iPhone**
 
-1. Die Adresse der Web-App in **Safari** öffnen (siehe „Bereitstellen“ unten).
+1. **https://schlichtingjohann-bit.github.io/Rennsteig-offline/** in **Safari** öffnen.
 2. Unten auf **Teilen** (Quadrat mit Pfeil) → **„Zum Home-Bildschirm“** → Hinzufügen.
 3. Die App **vom Home-Bildschirm** starten und **„Offline-Daten laden“** tippen (ca. 58 MB, am besten im WLAN).
    Wichtig: erst hinzufügen, dann laden – die Home-Bildschirm-App hat einen eigenen Speicher.
