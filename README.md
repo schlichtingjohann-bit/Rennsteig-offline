@@ -42,8 +42,8 @@ Automatisch im Android-Emulator aufgenommen (Testposition bei Rennsteig-km 27 am
 
 ## Installation
 
-1. Die APK aus den [Releases](../../releases) (oder als Artefakt des letzten Workflow-Laufs) aufs
-   Handy laden.
+1. Die APK aufs Handy laden: aus den [Releases](../../releases), direkt aus
+   [`dist/RennsteigOffline.apk`](dist/RennsteigOffline.apk) oder als Artefakt des letzten Workflow-Laufs.
 2. Öffnen und die Installation aus dieser Quelle einmalig erlauben.
 3. Beim ersten Start wird die Offline-Karte eingerichtet (wenige Sekunden), danach Standort freigeben.
 
@@ -70,6 +70,10 @@ OpenStreetMap enthält keine Bewertungen. Mit ★ markiert werden deshalb
 | `.github/workflows/build.yml` | Baut Daten und APK, testet im Emulator, veröffentlicht Releases |
 
 ### Daten neu erzeugen
+
+Über **Actions → „APK bauen“ → Run workflow** mit „OSM- und Kartendaten neu erzeugen“ werden Route,
+Orte und Karte aus dem aktuellen OpenStreetMap-Stand neu gebaut; mit „GitHub-Release veröffentlichen“
+entsteht gleich ein neues Release. Ein Commit mit `[release]` (und optional `[apk]`) im Text tut dasselbe.
 
 Der Workflow **„APK bauen“** lädt die Geofabrik-Extrakte (Thüringen, Oberfranken, Hessen), sucht die
 Rennsteig-Relation, setzt die Route zusammen, wählt die Orte im Korridor aus, rechnet das Höhenprofil,
