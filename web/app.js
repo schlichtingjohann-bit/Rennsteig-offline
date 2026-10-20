@@ -1211,5 +1211,7 @@
     if (S.dataOutdated) toast("Neue Kartendaten verfügbar – im Menü ⋮ laden.");
   }
   window.addEventListener("error", (e) => console.error("Fehler:", e.message));
+  // Safari ignoriert user-scalable=no: Seitenzoom unterbinden (die Karte zoomt über Touch-Ereignisse)
+  document.addEventListener("gesturestart", (e) => e.preventDefault());
   boot();
 })();
