@@ -66,11 +66,12 @@ Nach der Einrichtung läuft sie **ohne Internet** und startet vom Home-Bildschir
 4. Standort erlauben („Beim Verwenden der App“) und einmal auf ◎ bzw. den Kompass tippen, um die
    Bewegungssensoren für das Einnorden freizugeben.
 
-| Installation | Einnorden & Sichtkegel | Details zu einem Ort |
-| --- | --- | --- |
-| ![Installation](docs/screenshots/web-01-installieren.png) | ![Karte](docs/screenshots/web-02-karte.png) | ![Ort](docs/screenshots/web-04-ort.png) |
+| Installation | Einnorden & Sichtkegel | Details zu einem Ort | Ohne Internet |
+| --- | --- | --- | --- |
+| ![Installation](docs/screenshots/web-01-installieren.png) | ![Karte](docs/screenshots/web-02-karte.png) | ![Ort](docs/screenshots/web-04-ort.png) | ![Offline](docs/screenshots/web-06-offline.png) |
 
-Bildschirmfotos automatisch mit der Safari-Engine (WebKit) in iPhone-Größe aufgenommen.
+Bildschirmfotos automatisch mit der Safari-Engine (WebKit) in iPhone-Größe aufgenommen; das letzte Bild
+nach dem Neuladen bei abgeschaltetem Server.
 
 **Unterschiede zur Android-App:** Die Wegaufzeichnung läuft nur, solange die App geöffnet ist (iOS
 erlaubt Web-Apps kein GPS bei gesperrtem Bildschirm) – während der Aufzeichnung bleibt der Bildschirm
