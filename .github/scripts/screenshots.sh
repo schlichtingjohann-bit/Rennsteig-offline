@@ -49,11 +49,23 @@ PY
 
 tap() {
   local pos
+  dismiss_anr
   pos=$(ui_center "$@")
   if [ -n "$pos" ]; then adb shell input tap $pos; else echo "nicht gefunden: $*"; fi
 }
 
+# Der langsame Emulator meldet gelegentlich "System UI isn't responding" – Dialog wegklicken
+dismiss_anr() {
+  local pos
+  for label in Wait Warten; do
+    pos=$(ui_center text "$label")
+    if [ -n "$pos" ]; then adb shell input tap $pos; echo "ANR-Dialog geschlossen"; sleep 2; fi
+  done
+}
+
 adb wait-for-device
+adb shell settings put global hide_error_dialogs 1 || true
+adb shell settings put global anr_show_background 0 || true
 adb install -r "$APK"
 for p in ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION POST_NOTIFICATIONS; do
   adb shell pm grant $PKG android.permission.$p || true
@@ -62,6 +74,7 @@ adb emu geo fix "$LON" "$LAT" 900
 adb logcat -c
 adb shell am start -W -n $PKG/.MainActivity
 for i in $(seq 1 12); do sleep 5; adb emu geo fix "$LON" "$LAT" 900; done
+dismiss_anr
 shot 01-karte-einnorden
 
 tap content-desc "Höhenprofil"

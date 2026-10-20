@@ -211,7 +211,7 @@ jobs:
           ram-size: 3072M
           disable-animations: true
           emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-metrics
+          emulator-options: -no-window -gpu swangle_indirect -noaudio -no-boot-anim -camera-back none -no-metrics
           script: bash .github/scripts/screenshots.sh RennsteigOffline-x86_64.apk docs/screenshots
 
       - name: Bildschirmfotos ins Repository übernehmen
