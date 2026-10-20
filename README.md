@@ -1,6 +1,7 @@
 # Rennsteig Offline
 
-Android-App für die Wanderung auf dem **Rennsteig** (Hörschel → Blankenstein, ca. 170 km).
+Android-App für die Wanderung auf dem **Rennsteig** (Hörschel → Blankenstein, ca. 170 km) – und
+dieselbe App als **Web-App für iPhone und iPad** ([siehe unten](#iphone--ipad-web-app)).
 Karte, Route, Orte, Höhenprofil, GPS und Kompass funktionieren **komplett ohne Internet**.
 
 ## Funktionen
@@ -49,6 +50,44 @@ Automatisch im Android-Emulator aufgenommen (Testposition bei Rennsteig-km 27 am
 
 Android 6.0 oder neuer.
 
+## iPhone & iPad (Web-App)
+
+APK-Dateien laufen nur auf Android – auch mit den neuen EU-Regeln installiert ein iPhone nur von Apple
+signierte Apps. Für iPhone und iPad gibt es deshalb dieselbe App als **Web-App** (`web/`): gleiche
+Karte, Route, Orte, Höhenprofil, GPS, Kompass mit Sichtkegel und **automatischem Einnorden**.
+Nach der Einrichtung läuft sie **ohne Internet** und startet vom Home-Bildschirm wie eine normale App.
+
+**Installation auf dem iPhone**
+
+1. Die Adresse der Web-App in **Safari** öffnen (siehe „Bereitstellen“ unten).
+2. Unten auf **Teilen** (Quadrat mit Pfeil) → **„Zum Home-Bildschirm“** → Hinzufügen.
+3. Die App **vom Home-Bildschirm** starten und **„Offline-Daten laden“** tippen (ca. 58 MB, am besten im WLAN).
+   Wichtig: erst hinzufügen, dann laden – die Home-Bildschirm-App hat einen eigenen Speicher.
+4. Standort erlauben („Beim Verwenden der App“) und einmal auf ◎ bzw. den Kompass tippen, um die
+   Bewegungssensoren für das Einnorden freizugeben.
+
+| Installation | Einnorden & Sichtkegel | Details zu einem Ort |
+| --- | --- | --- |
+| ![Installation](docs/screenshots/web-01-installieren.png) | ![Karte](docs/screenshots/web-02-karte.png) | ![Ort](docs/screenshots/web-04-ort.png) |
+
+Bildschirmfotos automatisch mit der Safari-Engine (WebKit) in iPhone-Größe aufgenommen.
+
+**Unterschiede zur Android-App:** Die Wegaufzeichnung läuft nur, solange die App geöffnet ist (iOS
+erlaubt Web-Apps kein GPS bei gesperrtem Bildschirm) – während der Aufzeichnung bleibt der Bildschirm
+deshalb an. Neue Kartendaten werden beim nächsten Start mit Internet erkannt und können im Menü ⋮ geladen
+werden; bis dahin bleiben die alten Daten nutzbar. Die Web-App läuft auch auf Android und am Computer
+(Chrome, Edge, Firefox, Safari).
+
+**Bereitstellen:** Die Web-App muss einmal über **HTTPS** erreichbar sein (danach nicht mehr).
+
+- **GitHub Pages:** *Settings → Pages → Source: „GitHub Actions“* einschalten. Danach veröffentlicht
+  jeder Workflow-Lauf die Web-App unter `https://<benutzer>.github.io/<repository>/`.
+  Bei privaten Repositories geht das nur mit GitHub Pro – sonst das Repository öffentlich machen.
+- **Beliebiger Webspace:** den Inhalt von `RennsteigOffline-Web-*.zip` (Release bzw. Artefakt
+  `web-app`) per HTTPS ausliefern, z. B. Netlify, Cloudflare Pages oder der eigene Webspace.
+
+Lokal bauen: `pip install -r web/requirements.txt && python3 web/build_web.py --data build/out --out build/web`
+
 ## Wie werden die „besten“ Orte bestimmt?
 
 OpenStreetMap enthält keine Bewertungen. Mit ★ markiert werden deshalb
@@ -67,15 +106,16 @@ OpenStreetMap enthält keine Bewertungen. Mit ★ markiert werden deshalb
 | `app/src/main/assets/style/rennsteig.json` | Kartenstil (OpenMapTiles-Schema) |
 | `app/src/main/assets/data/` | Route, Orte und Höhenprofil (von der CI erzeugt) |
 | `pipeline/` | Datenaufbereitung: OSM-Extrakt → Route/POIs, Höhenmodell, Vektorkacheln |
-| `.github/workflows/build.yml` | Baut Daten und APK, testet im Emulator, veröffentlicht Releases |
+| `web/` | Web-App für iPhone & Co. (MapLibre GL JS, PMTiles, Service Worker); `build_web.py` baut sie aus denselben Daten |
+| `.github/workflows/build.yml` | Baut Daten, APK und Web-App, testet im Emulator und in WebKit, veröffentlicht Releases und GitHub Pages |
 
 ### Daten neu erzeugen
 
-Über **Actions → „APK bauen“ → Run workflow** mit „OSM- und Kartendaten neu erzeugen“ werden Route,
+Über **Actions → „APK und Web-App bauen“ → Run workflow** mit „OSM- und Kartendaten neu erzeugen“ werden Route,
 Orte und Karte aus dem aktuellen OpenStreetMap-Stand neu gebaut; mit „GitHub-Release veröffentlichen“
 entsteht gleich ein neues Release. Ein Commit mit `[release]` (und optional `[apk]`) im Text tut dasselbe.
 
-Der Workflow **„APK bauen“** lädt die Geofabrik-Extrakte (Thüringen, Oberfranken, Hessen), sucht die
+Der Workflow **„APK und Web-App bauen“** lädt die Geofabrik-Extrakte (Thüringen, Oberfranken, Hessen), sucht die
 Rennsteig-Relation, setzt die Route zusammen, wählt die Orte im Korridor aus, rechnet das Höhenprofil,
 erzeugt mit [planetiler](https://github.com/onthegomap/planetiler) die Vektorkarte und baut die APK.
 Lokal geht das mit:
@@ -99,6 +139,8 @@ Versionen über alte installieren lassen. Ein eigener Schlüssel kann über die 
 - Kartenschema: [OpenMapTiles](https://openmaptiles.org/)
 - Höhendaten: [Mapzen Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (SRTM, EU-DEM/Copernicus u. a.)
 - Schrift: Noto Sans (SIL Open Font License)
-- Kartenbibliothek: [MapLibre Native](https://github.com/maplibre/maplibre-native) (BSD)
+- Kartenbibliothek: [MapLibre Native](https://github.com/maplibre/maplibre-native) (BSD), in der Web-App
+  [MapLibre GL JS](https://github.com/maplibre/maplibre-gl-js) (BSD-3-Clause, `web/vendor/LICENSE-maplibre-gl.txt`)
+  und [PMTiles](https://github.com/protomaps/PMTiles) (BSD-3-Clause, © Protomaps LLC)
 
 Gut Runst!

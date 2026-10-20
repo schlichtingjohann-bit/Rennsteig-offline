@@ -1,4 +1,4 @@
-name: APK bauen
+name: APK und Web-App bauen
 
 on:
   push:
@@ -26,6 +26,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: build-${{ github.ref }}
@@ -103,6 +105,18 @@ jobs:
             done
           fi
 
+      - name: Web-App für iPhone & Co. bauen
+        run: |
+          python3 -m pip install -q -r web/requirements.txt
+          python3 web/build_web.py --data build/out --out build/web
+          (cd build && zip -qr "../RennsteigOffline-Web-${{ steps.version.outputs.name }}.zip" web)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-app
+          path: build/web
+          retention-days: 30
+
       - uses: gradle/actions/setup-gradle@v4
 
       - name: APK bauen
@@ -154,9 +168,11 @@ jobs:
 
           Enthalten: Offline-Karte mit Schummerung, exakte Route aus OpenStreetMap, GPS-Standort, Kompass mit automatischem Einnorden, Unterkünfte, Gastronomie, Sehenswürdigkeiten, Aussichtspunkte, Schutzhütten, Trinkwasser, Bahnhöfe, Höhenprofil und Wegaufzeichnung.
 
+          **iPhone/iPad:** Die Web-App (`RennsteigOffline-Web-*.zip`) läuft in Safari und wird über „Teilen → Zum Home-Bildschirm“ installiert. Sie muss dafür auf einem HTTPS-Webspace liegen (z. B. GitHub Pages, siehe README).
+
           `Rennsteig.gpx` enthält die Route für andere Navi-Apps.
           NOTES
-          gh release create "v$V" RennsteigOffline-*.apk Rennsteig.gpx \
+          gh release create "v$V" RennsteigOffline-*.apk RennsteigOffline-Web-*.zip Rennsteig.gpx \
             --target "$GITHUB_SHA" --title "Rennsteig Offline $V" --notes-file notes.md
 
       - name: APK ins Repository legen
@@ -227,3 +243,94 @@ jobs:
               sleep $((i * 5))
             done
           fi
+
+  web:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-app
+          path: build/web
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Safari-Engine (WebKit) installieren
+        run: |
+          mkdir -p /tmp/pw && cd /tmp/pw && npm init -y > /dev/null && npm i -q playwright@1.56.1
+          npx playwright install --with-deps webkit
+
+      - name: Web-App wie auf dem iPhone testen
+        run: |
+          read -r LON LAT < <(python3 -c "
+          import json
+          fc = json.load(open('app/src/main/assets/data/route.geojson'))
+          km = [f for f in fc['features'] if f['properties'].get('kind') == 'km' and f['properties']['km'] == 27]
+          print(*km[0]['geometry']['coordinates'])")
+          echo "Testposition: $LAT, $LON"
+          (cd build/web && python3 -m http.server 8080 > /tmp/http.log 2>&1 &)
+          sleep 1
+          mkdir -p docs/screenshots
+          NODE_PATH=/tmp/pw/node_modules node .github/scripts/web_screenshots.js http://localhost:8080/ docs/screenshots "$LAT" "$LON"
+
+      - name: Bildschirmfotos ins Repository übernehmen
+        if: github.ref_type == 'branch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots
+          if ! git diff --cached --quiet; then
+            git commit -q -m "Bildschirmfotos der Web-App (WebKit/iPhone) aktualisiert"
+            for i in 1 2 3 4; do
+              git pull -q --rebase origin "$GITHUB_REF_NAME" && git push -q origin "HEAD:$GITHUB_REF_NAME" && break
+              sleep $((i * 5))
+            done
+          fi
+
+  pages:
+    # Veröffentlicht die Web-App, sobald GitHub Pages mit Quelle „GitHub Actions“ eingeschaltet ist
+    needs: build
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Ist GitHub Pages eingeschaltet?
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TYPE=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq .build_type 2>/dev/null || true)
+          if [ "$TYPE" = "workflow" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::GitHub Pages ist aus. Einschalten: Settings → Pages → Source: GitHub Actions (bei privaten Repositories nur mit GitHub Pro)."
+          fi
+
+      - uses: actions/download-artifact@v4
+        if: steps.check.outputs.enabled == 'true'
+        with:
+          name: web-app
+          path: build/web
+
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.check.outputs.enabled == 'true'
+        with:
+          path: build/web
+
+      - id: deploy
+        if: steps.check.outputs.enabled == 'true'
+        uses: actions/deploy-pages@v4
+
+      - name: Adresse der Web-App
+        if: steps.check.outputs.enabled == 'true'
+        run: echo "::notice::Web-App online unter ${{ steps.deploy.outputs.page_url }}"

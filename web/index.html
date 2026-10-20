@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Rennsteig">
+<meta name="theme-color" content="#2f5d3a">
+<meta name="description" content="Offline-Wanderkarte für den Rennsteig mit GPS, Kompass und Orten entlang des Weges">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="app.css">
+<title>Rennsteig Offline</title>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="top">
+  <div id="status" class="card" role="button" tabindex="0">
+    <div id="statusTitle">Rennsteig Offline</div>
+    <div id="statusDetail"></div>
+    <div id="statusWarn" hidden></div>
+  </div>
+  <div class="col">
+    <button id="btnCompass" class="round" aria-label="Kompass: Karte einnorden">
+      <svg viewBox="0 0 24 24" id="compassNeedle"><circle cx="12" cy="12" r="10.5" fill="#fff" stroke="rgba(0,0,0,.2)" stroke-width=".6"/><path d="M12 3l3.2 9H8.8z" fill="#d1294d"/><path d="M12 21l-3.2-9h6.4z" fill="#8a8a8a"/><circle cx="12" cy="12" r="1.2" fill="#fff"/></svg>
+    </button>
+    <button id="btnMenu" class="round" aria-label="Menü">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+    </button>
+  </div>
+</div>
+
+<div id="bottom">
+  <div id="fabs">
+    <button id="btnTrack" class="round" aria-label="Weg aufzeichnen"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="#d1294d"/></svg></button>
+    <button id="btnProfile" class="round" aria-label="Höhenprofil"><svg viewBox="0 0 24 24"><path d="M2 20l5.5-10 3.5 5 4.5-9L22 20z"/></svg></button>
+    <button id="btnList" class="round" aria-label="Liste der Orte"><svg viewBox="0 0 24 24"><path d="M3 5h3v3H3zM8 5.5h13v2H8zM3 10.5h3v3H3zM8 11h13v2H8zM3 16h3v3H3zM8 16.5h13v2H8z"/></svg></button>
+    <button id="btnLocate" class="round big" aria-label="Standort folgen"><svg viewBox="0 0 24 24" id="locateIcon"></svg></button>
+  </div>
+  <div id="attribution">© OpenStreetMap-Mitwirkende</div>
+  <div id="poiCard" class="card sheet" hidden></div>
+  <div id="profilePanel" class="card" hidden><canvas id="profileCanvas"></canvas></div>
+</div>
+
+<div id="listPanel" class="panel" hidden>
+  <div class="panelHead"><h2>Orte am Rennsteig</h2><button class="close" id="btnListClose" aria-label="Schließen">✕</button></div>
+  <input id="search" type="search" placeholder="Suchen (z. B. Inselsberg, Hotel, Baude) …" autocomplete="off">
+  <div class="row">
+    <button id="btnSort" class="flat">Sortiert: Rennsteig-km</button>
+    <button id="btnCats" class="flat">Kategorien</button>
+    <label class="check"><input type="checkbox" id="cbTop"> nur ★</label>
+  </div>
+  <div id="listCount" class="muted"></div>
+  <div id="list"></div>
+</div>
+
+<div id="sheet" class="modal" hidden><div class="modalBox" id="sheetBox"></div></div>
+
+<div id="setup" class="panel" hidden>
+  <div id="setupBox">
+    <img src="icons/icon-192.png" alt="" width="88" height="88">
+    <h1>Rennsteig Offline</h1>
+    <div id="setupText"></div>
+    <div id="progressWrap" hidden><div id="progressBar"></div></div>
+    <div id="setupStatus" class="muted"></div>
+    <div id="setupButtons"></div>
+  </div>
+</div>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/pmtiles.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
