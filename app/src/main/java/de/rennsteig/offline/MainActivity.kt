@@ -108,6 +108,8 @@ class MainActivity : Activity() {
     private val enabledCats = HashSet<PoiCategory>()
     private var onlyTop = false
     private var keepScreenOn = false
+    /** Gehrichtung: false = Hörschel → Blankenstein, true = Blankenstein → Hörschel */
+    private var reverse = false
 
     private val frameCallback = Choreographer.FrameCallback { onFrame() }
     private val trackListener: () -> Unit = { updateTrackSource(); updateStatus(force = true) }
@@ -882,11 +884,11 @@ class MainActivity : Activity() {
         arrow.rotation = (brg - mapBearing).toFloat()
         val along = routePos?.let { rp ->
             if (rp.offM < 2000) {
-                val dk = p.km - rp.km
+                val dk = if (reverse) rp.km - p.km else p.km - rp.km
                 when {
                     abs(dk) < 0.05 -> ""
-                    dk > 0 -> " · ${Geo.formatKm(dk)} km voraus (Richtung Blankenstein)"
-                    else -> " · ${Geo.formatKm(-dk)} km zurück (Richtung Hörschel)"
+                    dk > 0 -> " · ${Geo.formatKm(dk)} km voraus"
+                    else -> " · ${Geo.formatKm(-dk)} km zurück"
                 }
             } else ""
         } ?: ""
@@ -913,7 +915,9 @@ class MainActivity : Activity() {
             val parts = ArrayList<String>()
             if (pos != null && d != null && pos.offM < 3000) {
                 val total = d.route.lengthM / 1000.0
-                statusTitle.text = "Rennsteig-km ${Geo.formatKm(pos.km)} · noch ${Geo.formatKm(total - pos.km)} km"
+                val remaining = if (reverse) pos.km else total - pos.km
+                val goal = if (reverse) "Hörschel" else "Blankenstein"
+                statusTitle.text = "Rennsteig-km ${Geo.formatKm(pos.km)} · noch ${Geo.formatKm(remaining)} km bis $goal"
                 val ele = d.profile?.eleAt(pos.km)
                 if (ele != null && pos.offM < 300) parts.add("Höhe ca. ${ele.roundToInt()} m")
                 else if (fix.hasAltitude()) parts.add("Höhe ca. ${(fix.altitude - GEOID_HEIGHT).roundToInt()} m")
@@ -992,7 +996,8 @@ class MainActivity : Activity() {
         pm.menu.add(0, 3, 2, "Ganze Route zeigen")
         pm.menu.add(0, 4, 3, "Bildschirm anlassen").setCheckable(true).setChecked(keepScreenOn)
         pm.menu.add(0, 5, 4, "Aufgezeichneten Weg löschen")
-        pm.menu.add(0, 6, 5, "Über die App & Datenquellen")
+        pm.menu.add(0, 7, 5, "Gehrichtung: Blankenstein → Hörschel").setCheckable(true).setChecked(reverse)
+        pm.menu.add(0, 6, 6, "Über die App & Datenquellen")
         pm.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> showCategoryDialog()
@@ -1001,6 +1006,7 @@ class MainActivity : Activity() {
                 4 -> { keepScreenOn = !keepScreenOn; applyKeepScreenOn(); savePrefs() }
                 5 -> confirmClearTrack()
                 6 -> showAbout()
+                7 -> { reverse = !reverse; savePrefs(); updateStatus(force = true); updatePoiLive() }
             }
             true
         }
@@ -1083,6 +1089,7 @@ class MainActivity : Activity() {
         else cats.mapNotNullTo(enabledCats) { PoiCategory.of(it) }
         onlyTop = prefs.getBoolean("onlyTop", false)
         keepScreenOn = prefs.getBoolean("keepScreenOn", false)
+        reverse = prefs.getBoolean("reverse", false)
         preferHeadingUp = prefs.getBoolean("headingUp", true)
         applyKeepScreenOn()
     }
@@ -1092,6 +1099,7 @@ class MainActivity : Activity() {
             .putStringSet("cats", enabledCats.map { it.key }.toSet())
             .putBoolean("onlyTop", onlyTop)
             .putBoolean("keepScreenOn", keepScreenOn)
+            .putBoolean("reverse", reverse)
             .putBoolean("headingUp", preferHeadingUp)
             .apply()
     }
