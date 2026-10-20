@@ -78,7 +78,7 @@ PT=(java -Xmx${PLANETILER_HEAP:-4g} -jar "planetiler-$PLANETILER_VERSION.jar"
   --osm-path=region.osm.pbf --download --download_dir="$WORK/sources"
   --languages=de --exclude_layers=housenumber,aerodrome_label,aeroway --tile_compression=none --force)
 # Übersicht (bis z10) für das ganze Gebiet, Details (ab z11) nur im Korridor um den Weg
-"${PT[@]}" --bounds="$BBOX" --minzoom=0 --maxzoom=10 --output=overview.mbtiles
+"${PT[@]}" --bounds="$BBOX" --minzoom=0 --maxzoom=10 --render_maxzoom=10 --output=overview.mbtiles
 "${PT[@]}" --polygon=corridor.poly --minzoom=11 --maxzoom=14 --output=detail.mbtiles
 python3 "$ROOT/pipeline/merge_mbtiles.py" --overview overview.mbtiles --detail detail.mbtiles \
   --split-zoom 11 --out "$OUT/rennsteig.mbtiles"
