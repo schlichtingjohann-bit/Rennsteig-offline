@@ -26,8 +26,9 @@ shot() { adb exec-out screencap -p > "$OUT/$1.png"; echo "Bild $1 gespeichert"; 
 
 ui_center() {
   # $1 = Attribut (content-desc|resource-id|text), $2 = Wert, $3 = Index (optional)
-  adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1
-  adb pull /sdcard/ui.xml /tmp/ui.xml > /dev/null 2>&1
+  rm -f /tmp/ui.xml
+  adb shell uiautomator dump /sdcard/ui.xml >&2 || true
+  adb pull /sdcard/ui.xml /tmp/ui.xml > /dev/null 2>&1 || { echo "UI-Dump fehlgeschlagen" >&2; return; }
   python3 - "$1" "$2" "${3:-0}" <<'PY'
 import re, sys
 attr, val, idx = sys.argv[1], sys.argv[2], int(sys.argv[3])
@@ -76,7 +77,7 @@ tap resource-id "$PKG:id/itemName" 3
 sleep 6
 shot 04-ort-details
 
-adb shell input keyevent KEYCODE_BACK
+tap content-desc "Schließen"
 sleep 1
 tap content-desc "Menü"
 sleep 2
@@ -84,5 +85,9 @@ tap text "Ganze Route zeigen"
 sleep 10
 shot 05-gesamte-route
 
-echo "==== logcat (Auszug) ===="
-adb logcat -d -v brief | grep -iE "AndroidRuntime|FATAL|maplibre|mbgl|rennsteig|Exception" | tail -n 250
+echo "==== logcat der App ===="
+APP_PID=$(adb shell pidof $PKG | tr -d '\r')
+echo "PID: $APP_PID"
+if [ -n "$APP_PID" ]; then adb logcat -d -v brief --pid="$APP_PID" | tail -n 300; fi
+echo "==== logcat Mbgl/Rennsteig/Absturz ===="
+adb logcat -d -v brief -s Mbgl:V Rennsteig:V AndroidRuntime:E MapLibre:V | tail -n 200

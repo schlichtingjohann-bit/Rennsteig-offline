@@ -362,12 +362,14 @@
       }
     },
     {
-      "id": "me-dot", "type": "symbol", "source": "me",
+      "id": "me-dot", "type": "circle", "source": "me",
       "filter": ["==", ["get", "kind"], "me"],
-      "layout": {
-        "icon-image": ["case", ["==", ["get", "stale"], true], "me-dot-stale", "me-dot"],
-        "icon-allow-overlap": true,
-        "icon-ignore-placement": true
+      "paint": {
+        "circle-radius": 8,
+        "circle-color": ["case", ["==", ["get", "stale"], true], "#8e8e8e", "#1f63d6"],
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 3,
+        "circle-pitch-alignment": "map"
       }
     }
   ]

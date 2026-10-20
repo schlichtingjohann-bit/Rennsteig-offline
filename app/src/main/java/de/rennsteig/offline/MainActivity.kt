@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.provider.Settings
 import android.text.method.LinkMovementMethod
+import android.util.Log
 import android.util.TypedValue
 import android.view.Choreographer
 import android.view.Gravity
@@ -336,6 +337,19 @@ class MainActivity : Activity() {
         for ((name, bmp) in icons) builder.withImage(name, bmp)
         m.setStyle(builder) { s -> onStyleLoaded(s, d) }
 
+        // Diagnose: Fehler beim Laden von Schriften, Symbolen und Shadern ins Log schreiben
+        mapView.addOnStyleImageMissingListener { id ->
+            Log.w(TAG, "Kartensymbol fehlt: $id")
+            icons[id]?.let { bmp -> style?.addImage(id, bmp) }
+        }
+        mapView.addOnGlyphsErrorListener { stack, start, end ->
+            Log.w(TAG, "Schrift fehlt: ${stack.joinToString()} $start-$end")
+        }
+        mapView.addOnSymbolErrorListener { msg -> Log.w(TAG, "Symbolfehler: $msg") }
+        mapView.addOnShaderCompileFailedListener { id, backend, defines -> Log.e(TAG, "Shader $id/$backend: $defines") }
+        mapView.addOnRenderErrorListener { Log.e(TAG, "Renderfehler") }
+        mapView.addOnDidFailLoadingMapListener { msg -> Log.e(TAG, "Karte konnte nicht geladen werden: $msg") }
+
         m.addOnMapClickListener { point -> onMapClick(point) }
         m.addOnMoveListener(object : MapLibreMap.OnMoveListener {
             override fun onMoveBegin(detector: MoveGestureDetector) {
@@ -362,6 +376,9 @@ class MainActivity : Activity() {
 
     private fun onStyleLoaded(s: Style, d: AppData) {
         style = s
+        Log.i(TAG, "Kartenstil geladen: ${s.layers.size} Ebenen, ${s.sources.size} Quellen")
+        // Symbole zusätzlich direkt hinzufügen (falls der Builder sie noch nicht übernommen hat)
+        for ((name, bmp) in icons) if (s.getImage(name) == null) s.addImage(name, bmp)
         s.getSourceAs<GeoJsonSource>("route")?.setGeoJson(d.routeGeoJson)
         applyFilter()
         updateTrackSource()
@@ -871,7 +888,7 @@ class MainActivity : Activity() {
         val arrow = poiLiveArrow ?: return
         val fix = lastFix
         if (fix == null) {
-            lineView.text = "Entfernung erscheint, sobald GPS bereit ist"
+            setText(lineView, "Entfernung erscheint, sobald GPS bereit ist")
             arrow.visibility = View.INVISIBLE
             return
         }
@@ -892,10 +909,14 @@ class MainActivity : Activity() {
                 }
             } else ""
         } ?: ""
-        lineView.text = "${Geo.formatDistance(dist)} Luftlinie, Richtung ${Geo.cardinal(brg)}$along"
+        setText(lineView, "${Geo.formatDistance(dist)} Luftlinie, Richtung ${Geo.cardinal(brg)}$along")
     }
 
     // ------------------------------------------------------------------ Status
+
+    private fun setText(view: TextView, value: CharSequence) {
+        if (view.text.toString() != value.toString()) view.text = value
+    }
 
     private fun updateStatus(force: Boolean) {
         val now = SystemClock.uptimeMillis()
@@ -904,12 +925,14 @@ class MainActivity : Activity() {
         val fix = lastFix
         val d = data
         val warn = ArrayList<String>()
+        var title = "Rennsteig Offline"
+        var detail = ""
         if (!LocationTracker.hasPermission(this)) {
-            statusTitle.text = "Standort nicht freigegeben"
-            statusDetail.text = "Tippe auf ◎, um die Standortfreigabe zu erteilen."
+            title = "Standort nicht freigegeben"
+            detail = "Tippe auf ◎, um die Standortfreigabe zu erteilen."
         } else if (fix == null) {
-            statusTitle.text = "Suche GPS-Signal …"
-            statusDetail.text = "GPS funktioniert ohne Internet. Unter freiem Himmel dauert der erste Fix meist unter einer Minute."
+            title = "Suche GPS-Signal …"
+            detail = "GPS funktioniert ohne Internet. Unter freiem Himmel dauert der erste Fix meist unter einer Minute."
         } else {
             val pos = routePos
             val parts = ArrayList<String>()
@@ -917,24 +940,23 @@ class MainActivity : Activity() {
                 val total = d.route.lengthM / 1000.0
                 val remaining = if (reverse) pos.km else total - pos.km
                 val goal = if (reverse) "Hörschel" else "Blankenstein"
-                statusTitle.text = "Rennsteig-km ${Geo.formatKm(pos.km)} · noch ${Geo.formatKm(remaining)} km bis $goal"
+                title = "Rennsteig-km ${Geo.formatKm(pos.km)} · noch ${Geo.formatKm(remaining)} km bis $goal"
                 val ele = d.profile?.eleAt(pos.km)
                 if (ele != null && pos.offM < 300) parts.add("Höhe ca. ${ele.roundToInt()} m")
                 else if (fix.hasAltitude()) parts.add("Höhe ca. ${(fix.altitude - GEOID_HEIGHT).roundToInt()} m")
                 parts.add(if (pos.offM < 25) "auf dem Weg" else "${Geo.formatDistance(pos.offM)} neben dem Weg")
                 if (pos.offM > 150) warn.add("Du bist ${Geo.formatDistance(pos.offM)} vom Rennsteig entfernt.")
             } else if (pos != null) {
-                statusTitle.text = "${Geo.formatDistance(pos.offM)} bis zum Rennsteig"
+                title = "${Geo.formatDistance(pos.offM)} bis zum Rennsteig"
                 parts.add("nächster Punkt: km ${Geo.formatKm(pos.km)}")
             }
             if (fix.hasAccuracy()) parts.add("GPS ±${fix.accuracy.roundToInt()} m")
             if (LocationTracker.ageMs(fix) > 30_000) warn.add("Letzter Standort ist ${LocationTracker.ageMs(fix) / 60_000 + 1} min alt – kein GPS-Empfang?")
-            statusDetail.text = parts.joinToString(" · ")
+            detail = parts.joinToString(" · ")
         }
         sensorHeading?.let {
-            val detail = statusDetail.text.toString()
             val h = "Blick ${Geo.cardinal(it)} ${it.roundToInt()}°"
-            statusDetail.text = if (detail.isEmpty() || fix == null) h else "$detail · $h"
+            detail = if (detail.isEmpty() || fix == null) h else "$detail · $h"
         }
         if (headingProvider.available && (headingProvider.accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE ||
                 headingProvider.accuracy == SensorManager.SENSOR_STATUS_ACCURACY_LOW) && sensorHeading != null
@@ -943,10 +965,13 @@ class MainActivity : Activity() {
         }
         if (TrackingService.running || TrackStore.size() > 1) {
             val rec = if (TrackingService.running) "● Aufzeichnung" else "Aufgezeichnet"
-            statusDetail.append("\n$rec: ${Geo.formatDistance(TrackStore.lengthM)}")
+            detail += "\n$rec: ${Geo.formatDistance(TrackStore.lengthM)}"
         }
-        statusWarn.text = warn.joinToString("\n")
-        statusWarn.visibility = if (warn.isEmpty()) View.GONE else View.VISIBLE
+        setText(statusTitle, title)
+        setText(statusDetail, detail)
+        setText(statusWarn, warn.joinToString("\n"))
+        val warnVisibility = if (warn.isEmpty()) View.GONE else View.VISIBLE
+        if (statusWarn.visibility != warnVisibility) statusWarn.visibility = warnVisibility
     }
 
     // ------------------------------------------------------------------ Aufzeichnung, Profil, Menü
@@ -1116,6 +1141,7 @@ class MainActivity : Activity() {
     private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_LONG).show()
 
     companion object {
+        private const val TAG = "Rennsteig"
         private const val REQ_LOCATION = 1
         private const val REQ_NOTIFY = 2
         private const val EMPTY = """{"type":"FeatureCollection","features":[]}"""
