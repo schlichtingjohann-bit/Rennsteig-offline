@@ -88,7 +88,7 @@ tap content-desc "Liste der Orte"
 sleep 4
 shot 03-orte-liste
 tap resource-id "$PKG:id/itemName" 3
-sleep 6
+sleep 25
 shot 04-ort-details
 
 tap content-desc "Schließen"

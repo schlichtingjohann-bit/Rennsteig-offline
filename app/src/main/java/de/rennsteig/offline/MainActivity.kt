@@ -805,6 +805,7 @@ class MainActivity : Activity() {
             .padding(0.0, 0.0, 0.0, 0.0)
             .build()
         m.animateCamera(CameraUpdateFactory.newCameraPosition(target), 500)
+        mapView.postDelayed({ Log.i(TAG, "Kamera nach Fokus: ${map?.cameraPosition?.target}") }, 1500)
     }
 
     private fun clearSelection() {
