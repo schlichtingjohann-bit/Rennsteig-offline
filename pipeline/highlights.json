@@ -1,0 +1,101 @@
+{
+  "_comment": "Kuratierte Höhepunkte. 'match' ist ein regulärer Ausdruck auf den OSM-Namen (ohne Groß-/Kleinschreibung). Nur Objekte, die in OSM tatsächlich innerhalb von 'max_off' Metern zum Rennsteig liegen, werden markiert – Koordinaten stammen immer aus OSM.",
+  "highlights": [
+    {
+      "match": "^Wartburg$",
+      "cats": ["sight"],
+      "max_off": 7000,
+      "desc": "UNESCO-Welterbe hoch über Eisenach. Hier übersetzte Martin Luther 1521/22 das Neue Testament ins Deutsche. Lohnender Abstecher vor oder nach dem Start in Hörschel."
+    },
+    {
+      "match": "^Drachenschlucht$",
+      "cats": ["sight", "view"],
+      "max_off": 6000,
+      "desc": "Wildromantische Klamm bei Eisenach – an der engsten Stelle kaum breiter als ein Meter."
+    },
+    {
+      "match": "^Gro(ß|ss)er Inselsberg$",
+      "cats": ["view"],
+      "max_off": 2000,
+      "desc": "916 m – einer der markantesten Gipfel des Thüringer Waldes mit weitem Rundblick. Der Rennsteig führt direkt über den Gipfel."
+    },
+    {
+      "match": "^Gro(ß|ss)er Beerberg$",
+      "cats": ["view"],
+      "max_off": 2000,
+      "desc": "Mit rund 983 m der höchste Berg Thüringens. Auf dem Gipfelplateau liegt ein geschütztes Hochmoor."
+    },
+    {
+      "match": "^Schneekopf$",
+      "cats": ["view"],
+      "max_off": 2000,
+      "desc": "978 m, zweithöchster Gipfel Thüringens. Vom Aussichtsturm blickt man aus über 1000 m Höhe über den Thüringer Wald."
+    },
+    {
+      "match": "Rennsteigwarte",
+      "cats": ["view", "sight"],
+      "max_off": 2500,
+      "desc": "Aussichtsturm am Rennsteig mit Blick über die Kammlagen."
+    },
+    {
+      "match": "Rennsteiggarten",
+      "cats": ["sight"],
+      "max_off": 3000,
+      "desc": "Botanischer Garten in Oberhof mit Pflanzen aus den Gebirgen der Welt."
+    },
+    {
+      "match": "Arena am Rennsteig",
+      "cats": ["sight"],
+      "max_off": 3000,
+      "desc": "Biathlon-Stadion von Oberhof, Austragungsort von Weltcups und Weltmeisterschaften."
+    },
+    {
+      "match": "Dreiherrenstein",
+      "cats": ["sight"],
+      "max_off": 1000,
+      "desc": "Historischer Grenzstein: Hier stießen einst drei Herrschaftsgebiete aneinander."
+    },
+    {
+      "match": "Dreistromstein",
+      "cats": ["sight"],
+      "max_off": 2000,
+      "desc": "Wasserscheide: Von hier fließt das Wasser zu Weser, Rhein und Elbe."
+    },
+    {
+      "match": "^Kickelhahn$",
+      "cats": ["view"],
+      "max_off": 9000,
+      "desc": "861 m, Aussichtsturm über Ilmenau. Unweit steht das Goethehäuschen."
+    },
+    {
+      "match": "Goethehäuschen",
+      "cats": ["sight"],
+      "max_off": 9000,
+      "desc": "Hier schrieb Goethe 1780 „Über allen Gipfeln ist Ruh“ an die Bretterwand der Jagdhütte."
+    },
+    {
+      "match": "^Ebertswiese$",
+      "cats": ["sight", "view"],
+      "max_off": 1500,
+      "desc": "Weite Bergwiese am Rennsteig – ein beliebter Rastplatz."
+    },
+    {
+      "match": "Schieferpark|Schieferbergbau",
+      "cats": ["sight"],
+      "max_off": 4000,
+      "desc": "Ehemaliger Schiefertagebau bei Lehesten – technisches Denkmal mit Ausstellung."
+    },
+    {
+      "match": "^Burg Lauenstein$",
+      "cats": ["sight"],
+      "max_off": 6000,
+      "desc": "Mittelalterliche Burg im Frankenwald hoch über dem Loquitztal."
+    },
+    {
+      "match": "^Th(ü|ue)ringer Warte$",
+      "cats": ["view", "sight"],
+      "max_off": 5000,
+      "desc": "Aussichtsturm im Frankenwald nahe Lauenstein."
+    }
+  ]
+}

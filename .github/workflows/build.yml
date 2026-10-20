@@ -1,0 +1,204 @@
+name: APK bauen
+
+on:
+  push:
+    paths-ignore:
+      - "README.md"
+      - "docs/**"
+  workflow_dispatch:
+    inputs:
+      refresh_data:
+        description: "OSM- und Kartendaten neu erzeugen (Cache ignorieren)"
+        type: boolean
+        default: false
+      release:
+        description: "GitHub-Release mit der APK veröffentlichen"
+        type: boolean
+        default: false
+      commit_apk:
+        description: "APK zusätzlich unter dist/ ins Repository legen"
+        type: boolean
+        default: false
+      screenshots:
+        description: "App im Emulator starten und Bildschirmfotos erstellen"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      version: ${{ steps.version.outputs.name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        id: version
+        run: echo "name=1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache-Schlüssel der Kartendaten
+        id: datakey
+        run: echo "key=mapdata-v1-${{ hashFiles('pipeline/**') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Kartendaten aus dem Cache holen
+        id: cache
+        if: ${{ !inputs.refresh_data }}
+        uses: actions/cache/restore@v4
+        with:
+          path: build/out
+          key: ${{ steps.datakey.outputs.key }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Werkzeuge für die Datenaufbereitung
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q osmium-tool
+          python3 -m pip install -q -r pipeline/requirements.txt
+
+      - name: Daten aufbereiten (Route, Orte, Höhenmodell, Vektorkarte)
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          PLANETILER_HEAP: 4g
+          REFRESH_OSM: "1"
+        run: bash pipeline/build_data.sh
+
+      - name: Kartendaten im Cache sichern
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: build/out
+          key: ${{ steps.datakey.outputs.key }}
+
+      - name: Daten in die App übernehmen
+        run: |
+          mkdir -p app/src/main/assets/data app/src/main/assets/tiles
+          cp build/out/route.geojson build/out/pois.geojson build/out/profile.json app/src/main/assets/data/
+          cp build/out/rennsteig.mbtiles build/out/dem.mbtiles app/src/main/assets/tiles/
+          ls -la build/out app/src/main/assets/data app/src/main/assets/tiles
+
+      - name: Geänderte Routen- und Ortsdaten ins Repository übernehmen
+        if: github.ref_type == 'branch'
+        run: |
+          if [ -n "$(git status --porcelain app/src/main/assets/data)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/src/main/assets/data
+            git commit -q -m "Daten: Route, Orte und Höhenprofil aus OpenStreetMap aktualisiert"
+            for i in 1 2 3 4; do
+              git pull -q --rebase origin "$GITHUB_REF_NAME" && git push -q origin "HEAD:$GITHUB_REF_NAME" && break
+              sleep $((i * 5))
+            done
+          fi
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: APK bauen
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: ./gradlew --no-daemon --stacktrace assembleRelease
+
+      - name: APK bereitstellen
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk "RennsteigOffline-${{ steps.version.outputs.name }}.apk"
+          cp build/out/rennsteig.gpx Rennsteig.gpx || true
+          ls -la *.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RennsteigOffline-apk
+          path: |
+            RennsteigOffline-*.apk
+            Rennsteig.gpx
+          retention-days: 30
+
+      - name: Release veröffentlichen
+        if: inputs.release || contains(github.event.head_commit.message, '[release]')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ steps.version.outputs.name }}"
+          cat > notes.md <<'NOTES'
+          Offline-Wander-App für den Rennsteig (Hörschel – Blankenstein).
+
+          **Installation:** APK auf dem Android-Handy herunterladen und öffnen. Beim ersten Mal fragt Android, ob Installationen aus dieser Quelle erlaubt werden sollen – einmal zulassen. Danach funktioniert alles ohne Internet.
+
+          Enthalten: Offline-Karte mit Schummerung, exakte Route aus OpenStreetMap, GPS-Standort, Kompass mit automatischem Einnorden, Unterkünfte, Gastronomie, Sehenswürdigkeiten, Aussichtspunkte, Schutzhütten, Trinkwasser, Bahnhöfe, Höhenprofil und Wegaufzeichnung.
+
+          `Rennsteig.gpx` enthält die Route für andere Navi-Apps.
+          NOTES
+          gh release create "v$V" RennsteigOffline-*.apk Rennsteig.gpx \
+            --target "$GITHUB_SHA" --title "Rennsteig Offline $V" --notes-file notes.md
+
+      - name: APK ins Repository legen
+        if: inputs.commit_apk
+        run: |
+          mkdir -p dist
+          rm -f dist/*.apk
+          cp RennsteigOffline-*.apk dist/RennsteigOffline.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/RennsteigOffline.apk
+          git commit -q -m "APK ${{ steps.version.outputs.name }} bereitgestellt"
+          for i in 1 2 3 4; do
+            git pull -q --rebase origin "$GITHUB_REF_NAME" && git push -q origin "HEAD:$GITHUB_REF_NAME" && break
+            sleep $((i * 5))
+          done
+
+  screenshots:
+    needs: build
+    if: github.event_name == 'push' || inputs.screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: RennsteigOffline-apk
+
+      - name: KVM aktivieren
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: App im Emulator testen
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash .github/scripts/screenshots.sh "$(ls RennsteigOffline-*.apk | head -n1)" docs/screenshots
+
+      - name: Bildschirmfotos ins Repository übernehmen
+        if: github.ref_type == 'branch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots
+          if ! git diff --cached --quiet; then
+            git commit -q -m "Bildschirmfotos aus dem Emulator aktualisiert"
+            for i in 1 2 3 4; do
+              git pull -q --rebase origin "$GITHUB_REF_NAME" && git push -q origin "HEAD:$GITHUB_REF_NAME" && break
+              sleep $((i * 5))
+            done
+          fi

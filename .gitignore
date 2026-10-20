@@ -1,0 +1,17 @@
+# Gradle / Android
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Große, in der CI erzeugte Kartendateien
+app/src/main/assets/tiles/
+
+# Python
+__pycache__/
+*.pyc
