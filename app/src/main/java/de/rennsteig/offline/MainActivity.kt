@@ -681,7 +681,7 @@ class MainActivity : Activity() {
         val d = data ?: return
         val (lat, lon) = d.route.pointAt(km)
         if (mode != Mode.FREE) setMode(Mode.FREE)
-        m.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(lat, lon), max(m.cameraPosition.zoom, 13.0)), 400)
+        focusOn(m, lat, lon, max(m.cameraPosition.zoom, 13.0))
         style?.getSourceAs<GeoJsonSource>("selected")?.setGeoJson(pointJson(lon, lat))
     }
 
@@ -789,8 +789,22 @@ class MainActivity : Activity() {
         if (moveCamera) {
             val m = map ?: return
             if (mode != Mode.FREE) setMode(Mode.FREE)
-            m.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(p.lat, p.lon), max(m.cameraPosition.zoom, 14.5)), 600)
+            focusOn(m, p.lat, p.lon, max(m.cameraPosition.zoom, 14.5))
         }
+    }
+
+    /** Zentriert die Karte auf einen Punkt (ohne den Versatz des Einnorden-Modus). */
+    private fun focusOn(m: MapLibreMap, lat: Double, lon: Double, zoom: Double) {
+        m.cancelTransitions()
+        topPadding = 0.0
+        val target = CameraPosition.Builder()
+            .target(LatLng(lat, lon))
+            .zoom(zoom)
+            .bearing(m.cameraPosition.bearing)
+            .tilt(0.0)
+            .padding(0.0, 0.0, 0.0, 0.0)
+            .build()
+        m.animateCamera(CameraUpdateFactory.newCameraPosition(target), 500)
     }
 
     private fun clearSelection() {
