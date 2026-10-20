@@ -22,6 +22,24 @@ Karte, Route, Orte, Höhenprofil, GPS und Kompass funktionieren **komplett ohne 
 - **Höhenprofil** der gesamten Route mit eigener Position
 - **Wegaufzeichnung** im Hintergrund (auch bei ausgeschaltetem Bildschirm)
 
+## Bildschirmfotos
+
+Automatisch im Android-Emulator aufgenommen (Testposition bei Rennsteig-km 27 am Großen Weißenberg):
+
+| Einnorden & Sichtkegel | Höhenprofil | Orte entlang des Weges | Details zu einem Ort | Gesamte Route |
+| --- | --- | --- | --- | --- |
+| ![Karte](docs/screenshots/01-karte-einnorden.png) | ![Profil](docs/screenshots/02-hoehenprofil.png) | ![Liste](docs/screenshots/03-orte-liste.png) | ![Details](docs/screenshots/04-ort-details.png) | ![Route](docs/screenshots/05-gesamte-route.png) |
+
+## Bedienung
+
+- **◎ / ➤ (unten rechts)**: Standort folgen → Einnorden (Karte dreht sich mit der Blickrichtung) → Norden oben
+- **Kompass (oben rechts)**: zeigt die Kartenausrichtung; antippen schaltet zwischen Einnorden und Norden oben
+- **Karte verschieben** beendet das Folgen, **Zoomen** nicht
+- **Symbol antippen**: Details mit Rennsteig-km, Entfernung und Richtung (Pfeil zeigt auf dem Bildschirm zum Ort)
+- **Liste**: alle Orte, sortiert nach km oder Nähe, mit Suche; **⋮**: Kategorien, nur Empfehlungen,
+  Gehrichtung, Bildschirm anlassen, ganze Route
+- **●**: Wegaufzeichnung starten/stoppen (läuft auch bei ausgeschaltetem Bildschirm)
+
 ## Installation
 
 1. Die APK aus den [Releases](../../releases) (oder als Artefakt des letzten Workflow-Laufs) aufs

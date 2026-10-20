@@ -73,8 +73,9 @@ done
 adb emu geo fix "$LON" "$LAT" 900
 adb logcat -c
 adb shell am start -W -n $PKG/.MainActivity
-for i in $(seq 1 12); do sleep 5; adb emu geo fix "$LON" "$LAT" 900; done
+for i in $(seq 1 18); do sleep 5; adb emu geo fix "$LON" "$LAT" 900; done
 dismiss_anr
+sleep 15
 shot 01-karte-einnorden
 
 tap content-desc "Höhenprofil"

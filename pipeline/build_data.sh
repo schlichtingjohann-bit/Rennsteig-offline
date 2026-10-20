@@ -63,7 +63,7 @@ python3 "$ROOT/pipeline/extract_osm.py" \
 echo "== Höhenmodell und Profil"
 python3 "$ROOT/pipeline/build_dem.py" \
   --route "$OUT/route.geojson" --pois "$OUT/pois.geojson" --corridor corridor.geojson \
-  --cache "$WORK/dem-cache" --out-mbtiles "$OUT/dem.mbtiles" --out-profile "$OUT/profile.json"
+  --overview-bbox "$BBOX" --cache "$WORK/dem-cache" --out-mbtiles "$OUT/dem.mbtiles" --out-profile "$OUT/profile.json"
 
 echo "== Höhenlinien"
 python3 "$ROOT/pipeline/build_contours.py" \
@@ -74,13 +74,12 @@ if [ ! -s "planetiler-$PLANETILER_VERSION.jar" ]; then
   curl -fsSL --retry 5 -o "planetiler-$PLANETILER_VERSION.jar" \
     "https://github.com/onthegomap/planetiler/releases/download/v$PLANETILER_VERSION/planetiler.jar"
 fi
-java -Xmx${PLANETILER_HEAP:-4g} -jar "planetiler-$PLANETILER_VERSION.jar" \
-  --osm-path=region.osm.pbf \
-  --download --download_dir="$WORK/sources" \
-  --polygon=corridor.poly \
-  --minzoom=0 --maxzoom=14 \
-  --languages=de \
-  --exclude_layers=housenumber,aerodrome_label,aeroway \
-  --tile_compression=none \
-  --output="$OUT/rennsteig.mbtiles" --force
+PT=(java -Xmx${PLANETILER_HEAP:-4g} -jar "planetiler-$PLANETILER_VERSION.jar"
+  --osm-path=region.osm.pbf --download --download_dir="$WORK/sources"
+  --languages=de --exclude_layers=housenumber,aerodrome_label,aeroway --tile_compression=none --force)
+# Übersicht (bis z10) für das ganze Gebiet, Details (ab z11) nur im Korridor um den Weg
+"${PT[@]}" --bounds="$BBOX" --minzoom=0 --maxzoom=10 --output=overview.mbtiles
+"${PT[@]}" --polygon=corridor.poly --minzoom=11 --maxzoom=14 --output=detail.mbtiles
+python3 "$ROOT/pipeline/merge_mbtiles.py" --overview overview.mbtiles --detail detail.mbtiles \
+  --split-zoom 11 --out "$OUT/rennsteig.mbtiles"
 ls -la "$OUT"

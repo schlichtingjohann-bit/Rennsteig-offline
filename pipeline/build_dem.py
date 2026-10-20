@@ -153,6 +153,8 @@ def main():
     ap.add_argument("--corridor", required=True, help="corridor.geojson")
     ap.add_argument("--cache", default="build/dem-cache")
     ap.add_argument("--minzoom", type=int, default=5)
+    ap.add_argument("--overview-bbox", help="minlon,minlat,maxlon,maxlat: bis z9 das ganze Gebiet abdecken")
+    ap.add_argument("--overview-maxzoom", type=int, default=9)
     ap.add_argument("--maxzoom", type=int, default=12)
     ap.add_argument("--profile-zoom", type=int, default=13)
     ap.add_argument("--out-mbtiles", required=True)
@@ -164,12 +166,17 @@ def main():
     bounds = corridor.bounds
 
     # --- Kacheln für die Schummerung
+    overview = [float(v) for v in args.overview_bbox.split(",")] if args.overview_bbox else None
     wanted = []
     for z in range(args.minzoom, args.maxzoom + 1):
-        for t in mercantile.tiles(*bounds, zooms=[z]):
+        area = overview if overview and z <= args.overview_maxzoom else bounds
+        for t in mercantile.tiles(*area, zooms=[z]):
             b = mercantile.bounds(t)
-            if corridor.intersects(box(b.west, b.south, b.east, b.north)):
+            if (overview and z <= args.overview_maxzoom) or corridor.intersects(box(b.west, b.south, b.east, b.north)):
                 wanted.append((z, t.x, t.y))
+    if overview:
+        bounds = (min(bounds[0], overview[0]), min(bounds[1], overview[1]),
+                  max(bounds[2], overview[2]), max(bounds[3], overview[3]))
     log(f"{len(wanted)} Höhenkacheln (z{args.minzoom}-{args.maxzoom})")
     with ThreadPoolExecutor(16) as ex:
         datas = list(ex.map(lambda k: fetch(args.cache, *k), wanted))
