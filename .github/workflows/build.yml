@@ -188,6 +188,12 @@ jobs:
         with:
           name: emulator-apk
 
+      - name: Speicherplatz freigeben
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost \
+            /opt/hostedtoolcache/CodeQL /usr/local/lib/android/sdk/ndk /usr/share/swift || true
+          df -h / "$HOME"
+
       - name: KVM aktivieren
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -201,8 +207,11 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          disk-size: 3000M
+          ram-size: 3072M
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-metrics
           script: bash .github/scripts/screenshots.sh RennsteigOffline-x86_64.apk docs/screenshots
 
       - name: Bildschirmfotos ins Repository übernehmen
